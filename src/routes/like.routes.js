@@ -5,10 +5,10 @@ import {
     toggleVideoLike,
     toggleTweetLike,
 } from "../controllers/like.controller.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js"
+import { verifyJwt } from "../middlewares/auth.middleware.js"
 
 const router = Router()
-router.use(verifyJWT)
+router.use(verifyJwt)
 
 router.route("/toggle/video/:videoId").post(toggleVideoLike)
 router.route("/toggle/comment/:commentId").post(toggleCommentLike)
