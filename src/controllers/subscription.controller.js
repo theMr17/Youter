@@ -8,7 +8,11 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     const { channelId } = req.params
 
     if (!channelId) {
-        throw new ApiError(400, "Channel Id is required")
+        throw new ApiError(400, "Channel id is required")
+    }
+
+    if (!mongoose.isValidObjectId(channelId)) {
+        throw new ApiError(400, "Channel id is invalid")
     }
     
     const subscription = await Subscription.aggregate([
@@ -48,12 +52,62 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const { channelId } = req.params
-    // TODO: get subscriber list of a channel
+
+    if (!channelId) {
+        throw new ApiError(400, "Channel id is required")
+    }
+
+    if (!mongoose.isValidObjectId(channelId)) {
+        throw new ApiError(400, "Channel id is invalid")
+    }
+
+    const subscriptions = await Subscription.aggregate([
+        {
+            $match: {
+                channel: new mongoose.Types.ObjectId(channelId)
+            }
+        }
+    ])
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                subscriptions,
+                "Subscribers fetched successfully"
+            )
+        )
 })
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
     const { subscriberId } = req.params
-    // TODO: get channel list to which user has subscribed
+
+    if (!subscriberId) {
+        throw new ApiError(400, "Subscriber id is required")
+    }
+
+    if (!mongoose.isValidObjectId(subscriberId)) {
+        throw new ApiError(400, "Subscriber id is invalid")
+    }
+
+    const subscribedChannels = await Subscription.aggregate([
+        {
+            $match: {
+                subscriber: new mongoose.Types.ObjectId(subscriberId)
+            }
+        }
+    ])
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                subscribedChannels,
+                "Subscribed channels fetched successfully"
+            )
+        )
 })
 
 export {
