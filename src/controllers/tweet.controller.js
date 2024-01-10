@@ -58,7 +58,48 @@ const getUserTweets = asyncHandler(async (req, res) => {
 })
 
 const updateTweet = asyncHandler(async (req, res) => {
-    // TODO: update tweet
+    const { tweetId } = req.params
+    const { content } = req.body
+
+    if (!tweetId) {
+        throw new ApiError(400, "Tweet id is required")
+    }
+
+    if (!mongoose.isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Tweet id is invalid")
+    }
+
+    if (!content) {
+        throw new ApiError("Content is required")
+    }
+
+    const tweet = await Tweet.findByIdAndUpdate(
+        tweetId,
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(tweetId),
+                owner: new mongoose.Types.ObjectId(req.user?._id)
+            },
+            $set: {
+                content
+            }
+        },
+        { new: true }
+    )
+
+    if (!tweet) {
+        throw new ApiError(400, "User not authorized to update the tweet")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                tweet,
+                "Tweet updated successfully"
+            )
+        )
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
