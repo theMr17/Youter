@@ -73,13 +73,22 @@ const updateTweet = asyncHandler(async (req, res) => {
         throw new ApiError("Content is required")
     }
 
-    const tweet = await Tweet.findByIdAndUpdate(
-        tweetId,
+    const tweet = await Tweet.aggregate([
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(tweetId),
                 owner: new mongoose.Types.ObjectId(req.user?._id)
-            },
+            }
+        }
+    ])
+
+    if (!tweet?.length) {
+        throw new ApiError(400, "User not authorized to update the tweet")
+    }
+
+    const updatedTweet = await Tweet.findByIdAndUpdate(
+        tweetId,
+        {
             $set: {
                 content
             }
@@ -87,16 +96,12 @@ const updateTweet = asyncHandler(async (req, res) => {
         { new: true }
     )
 
-    if (!tweet) {
-        throw new ApiError(400, "User not authorized to update the tweet")
-    }
-
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                tweet,
+                updatedTweet,
                 "Tweet updated successfully"
             )
         )
