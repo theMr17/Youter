@@ -96,6 +96,10 @@ const updateTweet = asyncHandler(async (req, res) => {
         { new: true }
     )
 
+    if (!updatedTweet) {
+        throw new ApiError(500, "Something went wrong while updating the user")
+    }
+
     return res
         .status(200)
         .json(
@@ -108,7 +112,44 @@ const updateTweet = asyncHandler(async (req, res) => {
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
-    // TODO: delete tweet
+    const { tweetId } = req.params
+
+    if (!tweetId) {
+        throw new ApiError(400, "Tweet id is required")
+    }
+
+    if (!mongoose.isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Tweet id is invalid")
+    }
+
+    const tweet = await Tweet.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(tweetId),
+                owner: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        }
+    ])
+
+    if (!tweet?.length) {
+        throw new ApiError(400, "User not authorized to delete the tweet")
+    }
+
+    const deletedTweet = await Tweet.findByIdAndDelete(tweetId)
+
+    if (!deletedTweet) {
+        throw new ApiError(500, "Something went wrong while deleting the user")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Tweet deleted successfully"
+            )
+        )
 })
 
 export {
