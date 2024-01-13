@@ -3,7 +3,7 @@ import { Video } from "../models/video.model.js"
 import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
@@ -98,12 +98,93 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    // TODO: update video details like title, description, thumbnail
+    const { title, description } = req.body
+    
+    if (!title && !description && !req.file) {
+        throw new ApiError(400, "Title, description or thumnail is required")
+    }
+
+    if (!videoId) {
+        throw new ApiError(400, "Video id is required")
+    }
+
+    if (!mongoose.isValidObjectId(videoId)) {
+        throw new ApiError(400, "Video id is invalid")
+    }
+
+    const video = await Video.findById(videoId)
+
+    if (!video.owner.equals(req.user?._id)) {
+        throw new ApiError(403, "User is not authorized to update the video")
+    }
+
+    const thumbnailLocalPath = req.file?.path
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+    
+    await deleteFromCloudinary(video.thumbnail, "image")
+
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set: {
+                title: title || video.title,
+                description: description || video.description,
+                thumbnail: thumbnail?.url || video.url
+            }
+        },
+        { new: true }
+    )
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedVideo,
+                "Video updated successfully"
+            )
+        )
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    // TODO: delete video
+
+    if (!videoId) {
+        throw new ApiError(400, "Video id is required")
+    }
+
+    if (!mongoose.isValidObjectId(videoId)) {
+        throw new ApiError(400, "Video id is invalid")
+    }
+    
+    const video = await Video.findById(videoId)
+
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+
+    if (!video.owner.equals(req.user?._id)) {
+        throw new ApiError(403, "User is not authorized to delete the video")
+    }
+
+    await deleteFromCloudinary(video.videoFile, "video")
+    await deleteFromCloudinary(video.thumbnail, "image")
+
+    const deletedVideo = await Video.findByIdAndDelete(videoId)
+
+    if (!deletedVideo) {
+        throw new ApiError(500, "Error while deleting the video")
+    }
+
+    return res.
+        status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Video deleted successfully"
+            )
+        )
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {

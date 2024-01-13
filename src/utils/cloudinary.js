@@ -1,4 +1,4 @@
-import {v2 as cloudinary} from "cloudinary"
+import { v2 as cloudinary } from "cloudinary"
 import fs from "fs"
           
 cloudinary.config({ 
@@ -24,4 +24,26 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 }
 
-export { uploadOnCloudinary }
+const deleteFromCloudinary = async (fileUrl, resource_type) => {
+  try {
+    const publicId = extractPublicIdFromUrl(fileUrl)
+    const response = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resource_type
+    })
+    return response
+  } catch (error) {
+    return null
+  }
+}
+
+function extractPublicIdFromUrl(url) {
+  const parts = url.split('/')
+  const publicIdWithFormat = parts[parts.length - 1] // last part of the URL
+  const publicId = publicIdWithFormat.split('.')[0] // remove the file format extension
+  return publicId
+}
+
+export { 
+  uploadOnCloudinary,
+  deleteFromCloudinary
+}
