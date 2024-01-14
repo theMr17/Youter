@@ -1,8 +1,39 @@
+import mongoose from "mongoose"
+import { Playlist } from "../models/playlist.model.js"
+import { ApiError } from "../utils/ApiError.js"
+import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const { name, description } = req.body
-    // TODO: create playlist
+    
+    if (!name) {
+        throw new ApiError(400, "Name is required")
+    }
+
+    if (!description) {
+        throw new ApiError(400, "Description is required")
+    }
+
+    const playlist = await Playlist.create({
+        name,
+        description,
+        owner: req.user?._id
+    })
+
+    if (!playlist) {
+        throw new ApiError(500, "An error occurred while creating the playlist")
+    }
+
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(
+                201,
+                playlist,
+                "Playlist created successfully"
+            )
+        )
 })
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
@@ -12,7 +43,30 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
 const getPlaylistById = asyncHandler(async (req, res) => {
     const { playlistId } = req.params
-    // TODO: get playlist by id
+
+    if (!playlistId) {
+        throw new ApiError(400, "Playlist id is required")
+    }
+
+    if (!mongoose.isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Playlist id is invalid")
+    }
+
+    const playlist = await Playlist.findById(playlistId)
+
+    if (!playlist) {
+        throw new ApiError(404, "Playlist not found")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                playlist,
+                "Playlist fetched successfully"
+            )
+        )
 })
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
