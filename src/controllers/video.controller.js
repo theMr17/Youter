@@ -135,6 +135,10 @@ const updateVideo = asyncHandler(async (req, res) => {
         { new: true }
     )
 
+    if (!updatedVideo) {
+        throw new ApiError(500, "Error while updating the video")
+    }
+
     return res
         .status(200)
         .json(

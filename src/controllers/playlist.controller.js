@@ -119,7 +119,49 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 const updatePlaylist = asyncHandler(async (req, res) => {
     const { playlistId } = req.params
     const { name, description } = req.body
-    // TODO: update playlist
+
+    if (!name && !description) {
+        throw new ApiError(400, "Name or description is required")
+    }
+
+    if (!playlistId) {
+        throw new ApiError(400, "Playlist id is required")
+    }
+
+    if (!mongoose.isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Playlist id is invalid")
+    }
+
+    const playlist = await Playlist.findById(playlistId)
+
+    if (!playlist.owner.equals(req.user?._id)) {
+        throw new ApiError(403, "User is not authorized to update the playlist")
+    }
+
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+        playlistId,
+        {
+            $set: {
+                name: name || playlist.title,
+                description: description || playlist.description,
+            }
+        },
+        { new: true }
+    )
+
+    if (!updatedPlaylist) {
+        throw new ApiError(500, "Error while updating the playlist")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedPlaylist,
+                "Playlist updated successfully"
+            )
+        )
 })
 
 export {
