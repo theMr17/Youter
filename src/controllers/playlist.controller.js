@@ -96,6 +96,46 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const { playlistId, videoId } = req.params
+
+    if (!playlistId) {
+        throw new ApiError(400, "Playlist id is required")
+    }
+
+    if (!mongoose.isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Playlist id is invalid")
+    }
+
+    if (!videoId) {
+        throw new ApiError(400, "Video id is required")
+    }
+
+    if (!mongoose.isValidObjectId(videoId)) {
+        throw new ApiError(400, "Video id is invalid")
+    }
+
+    const playlist = await Playlist.findById(playlistId)
+
+    if (!playlist) {
+        throw new ApiError(400, "Playlist not found")
+    }
+
+    playlist.videos.push(videoId)
+
+    const updatedPlaylist = await playlist.save({ validateBeforeSave: false })
+
+    if (!updatedPlaylist) {
+        throw new ApiError(500, "Error while updating playlist")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedPlaylist,
+                "Video added to playlist successfully"
+            )
+        )
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
