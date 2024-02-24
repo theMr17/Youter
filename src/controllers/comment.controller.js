@@ -48,7 +48,57 @@ const addComment = asyncHandler(async (req, res) => {
 })
 
 const updateComment = asyncHandler(async (req, res) => {
-    // TODO: update a comment
+    const { commentId } = req.params
+    const { content } = req.body
+
+    if (!commentId) {
+        throw new ApiError(400, "Comment id is required")
+    }
+
+    if (!mongoose.isValidObjectId(commentId)) {
+        throw new ApiError(400, "Comment id is invalid")
+    }
+
+    if (!content) {
+        throw new ApiError("Content is required")
+    }
+
+    const comment = await Comment.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(commentId),
+                owner: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        }
+    ])
+
+    if (!comment?.length) {
+        throw new ApiError(400, "User not authorized to update the comment")
+    }
+
+    const updatedComment = await Comment.findByIdAndUpdate(
+        commentId,
+        {
+            $set: {
+                content
+            }
+        },
+        { new: true }
+    )
+
+    if (!updatedComment) {
+        throw new ApiError(500, "Something went wrong while updating the comment")
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedComment,
+                "Comment updated successfully"
+            )
+        )
 })
 
 const deleteComment = asyncHandler(async (req, res) => {
